@@ -62,7 +62,7 @@ export function extractSnapshotDate(filename, fallbackDate) {
 }
 
 /**
- * Core ExcelHandler for Hellmann Inbound Reports
+ * Core ExcelHandler for Inbound Reports
  */
 export const ExcelHandler = {
   /**
@@ -165,7 +165,10 @@ export const ExcelHandler = {
       const headers = rawRows[0].map(h => String(h).trim());
       const getIdx = (name) => headers.indexOf(name);
 
-      const idxH = getIdx('Hellmann Ref No');
+      // Find ref no column by header substring, fallback to index 7 (Column H)
+      let idxH = headers.findIndex(h => h.toLowerCase().includes('ref no'));
+      if (idxH === -1) idxH = 7;
+
       const idxO = getIdx('Port of Origin Name');
       const idxD = getIdx('Carrier Name');
       const idxE = getIdx('Ocean Carrier Name');
@@ -194,7 +197,7 @@ export const ExcelHandler = {
         if (!pos.length) continue;
 
         const record = {
-          hellmannRef: String(row[idxH] || '').trim(),
+          forwarderRef: String(row[idxH] || '').trim(),
           originPort: String(row[idxO] || '').trim(),
           carrierName: String(row[idxD] || '').trim(),
           oceanCarrierName: String(row[idxE] || '').trim(),
@@ -264,7 +267,7 @@ export const ExcelHandler = {
       summaryData.push({
         _id: po,
         orderNumber: po,                           // Col A
-        hellmannRef: latest.hellmannRef,           // Col B
+        forwarderRef: latest.forwarderRef,         // Col B
         originPort: latest.originPort,             // Col C
         carrierName: latest.carrierName,           // Col D
         oceanCarrierName: latest.oceanCarrierName, // Col E
@@ -308,8 +311,8 @@ export const ExcelHandler = {
         formatter: (cell) => `<span class="font-mono font-semibold text-blue-700">${cell.getValue()}</span>`
       },
       {
-        title: "Hellmann Ref No",
-        field: "hellmannRef",
+        title: "Forwarder Ref No",
+        field: "forwarderRef",
         width: 140,
         headerFilter: "input",
         headerFilterPlaceholder: "Filter Ref...",
@@ -479,7 +482,7 @@ export const ExcelHandler = {
 
     const columnOrder = [
       { field: 'orderNumber', title: 'Order Number' },
-      { field: 'hellmannRef', title: 'Hellmann Ref No' },
+      { field: 'forwarderRef', title: 'Forwarder Ref No' },
       { field: 'originPort', title: 'Port of Origin Name' },
       { field: 'carrierName', title: 'Carrier Name' },
       { field: 'oceanCarrierName', title: 'Ocean Carrier Name' },
@@ -536,7 +539,7 @@ export const ExcelHandler = {
     const dates = ['2026-10-10', '2026-10-12', '2026-10-15', '2026-10-17'];
     const dummyHeaders = [
       "Lane ID", "Customer Business Unit", "POL-POD Lane Pair", "Carrier Name", "Ocean Carrier Name",
-      "MBL No", "Ocean Carrier Ref No", "Hellmann Ref No", "PO Number (Booking Stage)",
+      "MBL No", "Ocean Carrier Ref No", "Forwarder Ref No", "PO Number (Booking Stage)",
       "PO Number (Allocated to Container)", "Customer Booking Received Date",
       "Carrier Booking Request Confirmation Date", "Cargo Ready Date", "Port of Origin Code",
       "Port of Origin Name", "Country of Origin Code", "Country of Origin Name",
@@ -564,7 +567,7 @@ export const ExcelHandler = {
       const status1 = dIndex < 2 ? 'Departed' : 'Discharged from Vessel';
       const vessel1 = dIndex < 2 ? 'MAERSK DHAKA' : 'ONE HONOLULU';
       const r1 = new Array(dummyHeaders.length).fill('');
-      r1[3] = 'Hellmann Worldwide'; r1[4] = 'Maersk Line'; r1[5] = 'MEDU1029384';
+      r1[3] = 'Global Freight Logistics'; r1[4] = 'Maersk Line'; r1[5] = 'MEDU1029384';
       r1[7] = 'VEN-328901'; r1[8] = '4505127151'; r1[9] = '4505127151';
       r1[14] = 'Shanghai Port'; r1[23] = 'MSKU9281720'; r1[32] = eta1;
       r1[41] = status1; r1[44] = 'SHA - TYO'; r1[45] = vessel1;
@@ -575,7 +578,7 @@ export const ExcelHandler = {
       const status2 = dIndex === 0 ? 'Container Booked' : dIndex === 1 ? 'Picked Up to CY' : 'Departed';
       const container2 = dIndex === 0 ? '' : 'ONEU6213566';
       const r2 = new Array(dummyHeaders.length).fill('');
-      r2[3] = 'Hellmann Worldwide'; r2[4] = 'ONE Network'; r2[5] = 'ONEY9823411';
+      r2[3] = 'Global Freight Logistics'; r2[4] = 'ONE Network'; r2[5] = 'ONEY9823411';
       r2[7] = 'VEN-328902'; r2[8] = '4505127158, 4505127167'; r2[9] = '4505127158, 4505127167';
       r2[14] = 'Busan Port'; r2[23] = container2; r2[32] = '2026/10/20';
       r2[41] = status2; r2[44] = 'PUS - YOK'; r2[45] = 'ONE MILLAU';
@@ -586,7 +589,7 @@ export const ExcelHandler = {
       const status3 = dIndex >= 2 ? 'Delivered' : 'Arrived';
       const ata3 = dIndex >= 2 ? '2026/10/14' : '';
       const r3 = new Array(dummyHeaders.length).fill('');
-      r3[3] = 'Hellmann Worldwide'; r3[4] = 'CMA CGM'; r3[5] = 'CMAU3819201';
+      r3[3] = 'Global Freight Logistics'; r3[4] = 'CMA CGM'; r3[5] = 'CMAU3819201';
       r3[7] = 'VEN-328850'; r3[8] = '4505117511'; r3[9] = '4505117511';
       r3[14] = 'Singapore'; r3[23] = 'CMAU8192012'; r3[32] = '2026/10/12'; r3[33] = ata3;
       r3[41] = status3; r3[44] = 'SIN - KOB'; r3[45] = 'CMA CGM CHENNAI';

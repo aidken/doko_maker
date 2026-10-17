@@ -1,6 +1,6 @@
 # doko_maker 🚅📦📊
 
-An in-browser Single Page Application (SPA) designed to parse daily inbound ocean container transportation reports (Hellmann Inbound Reports), extract orders, display them in an interactive data grid, track schedule/vessel/ETA changes over time, and export unified summary reports to Excel (.xlsx) or CSV.
+An in-browser Single Page Application (SPA) designed to parse daily inbound ocean container transportation reports, extract orders, display them in an interactive data grid, track schedule/vessel/ETA changes over time, and export unified summary reports to Excel (.xlsx) or CSV.
 
 Built with **Vite**, **Tailwind CSS**, **Tabulator**, and **SheetJS (xlsx)**, configured for automated CI/CD deployment to **GitHub Pages** via **GitHub Actions**.
 
@@ -9,10 +9,10 @@ Built with **Vite**, **Tailwind CSS**, **Tabulator**, and **SheetJS (xlsx)**, co
 ## ✨ Features
 
 - 📁 **Zero-Server Processing (100% Client-Side)**: All processing runs locally in the browser via SheetJS. Sensitive order, container, and freight data never leaves your computer.
-- 📅 **Multi-Snapshot Time-Series Ingestion**: Upload 10, 30, or 50+ daily reports (`Inbound_Report_JP_YYYY-MM-DD.xlsx`). The app sorts them chronologically and traces each order across the entire timeline.
+- 📅 **Multi-Snapshot Time-Series Ingestion**: Upload 10, 30, or 50+ daily reports. The app sorts them chronologically and traces each order across the entire timeline.
 - 🔍 **Order Extraction & Allocation**:
-  - Automatically identifies 10-digit order numbers (`450xxxxxxx`) from container allocation (Column J) or booking stages (Column I).
-  - Handles multiple orders grouped under a single Hellmann Reference or container.
+  - Automatically identifies 10-digit order numbers from container allocation (Column J) or booking stages (Column I).
+  - Handles multiple orders grouped under a single reference or container.
 - 🕒 **Chronological Change History (Column Q)**:
   - Detects and logs changes between snapshot dates for:
     - `Latest Container Status`
@@ -21,7 +21,7 @@ Built with **Vite**, **Tailwind CSS**, **Tabulator**, and **SheetJS (xlsx)**, co
     - `First Leg ETD` and `First Leg ATD`
     - `First Leg Vessel`, `Second Leg Vessel`, `Third Leg Vessel`
     - `Route`
-  - Formats a clear log for each order, for example:  
+  - Formats a clear log for each order, for example:
     `2026-10-13: Container Number UETU7214088, Latest Container Status Container Booked. 2026-10-14: Latest Container Status Picked Up to CY.`
 - 📊 **Interactive Data Grid (Tabulator)**:
   - Instant live filter/search across all columns
@@ -38,7 +38,7 @@ Built with **Vite**, **Tailwind CSS**, **Tabulator**, and **SheetJS (xlsx)**, co
 | Output Col | Output Field | Origin Col & Header |
 | :--- | :--- | :--- |
 | **A** | **Order Number** | Col J (`PO Number (Allocated)`) / Col I (`PO Number (Booking)`) |
-| **B** | **Hellmann Ref No** | Col H (`Hellmann Ref No`) |
+| **B** | **Forwarder Ref No** | Col H (`Ref No`) |
 | **C** | **Port of Origin Name** | Col O (`Port of Origin Name`) |
 | **D** | **Carrier Name** | Col D (`Carrier Name`) |
 | **E** | **Ocean Carrier Name** | Col E (`Ocean Carrier Name`) |
@@ -66,7 +66,7 @@ This repository includes an automated GitHub Actions workflow ([`.github/workflo
 1. Push your code to GitHub:
    ```bash
    git add .
-   git commit -m "Implement Hellmann Inbound report parsing and change history"
+   git commit -m "Implement Inbound report parsing and change history"
    git push origin main
    ```
 2. In your GitHub repository:
@@ -107,7 +107,7 @@ doko_maker/
 │   └── workflows/
 │       └── deploy.yml   # GitHub Actions CI/CD workflow
 ├── src/
-│   ├── excel-handler.js # Hellmann report parser, date normalizer & export
+│   ├── excel-handler.js # Inbound report parser, date normalizer & export
 │   ├── main.js          # App lifecycle, Tabulator grid, filters & metrics
 │   └── style.css        # Tailwind directives & Tabulator styling
 ├── index.html           # SPA entry point
