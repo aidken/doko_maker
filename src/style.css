@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --bg-color: #f8fafc;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-color);
+  min-height: 100vh;
+}
+
+/* Dropzone animations */
+.dropzone {
+  transition: all 0.2s ease-in-out;
+}
+
+.dropzone.drag-active {
+  border-color: #3b82f6 !important;
+  background-color: #eff6ff !important;
+  transform: scale(1.005);
+}
+
+/* Custom Tabulator Theme Adjustments */
+.tabulator {
+  font-size: 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.tabulator .tabulator-header {
+  background-color: #f1f5f9;
+  border-bottom: 2px solid #cbd5e1;
+  color: #334155;
+  font-weight: 600;
+}
+
+.tabulator .tabulator-header .tabulator-col {
+  background-color: #f1f5f9;
+  border-right: 1px solid #e2e8f0;
+}
+
+.tabulator .tabulator-header .tabulator-col:hover {
+  background-color: #e2e8f0;
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable .tabulator-col-title {
+  padding-right: 18px;
+}
+
+.tabulator .tabulator-row {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tabulator .tabulator-row:hover {
+  background-color: #f8fafc !important;
+}
+
+.tabulator .tabulator-row.tabulator-selected {
+  background-color: #e0f2fe !important;
+}
+
+.tabulator .tabulator-cell {
+  padding: 8px 12px;
+  border-right: 1px solid #f1f5f9;
+}
+
+.tabulator .tabulator-cell.tabulator-editing {
+  border: 2px solid #3b82f6 !important;
+  padding: 0 !important;
+}
+
+.tabulator .tabulator-footer {
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  padding: 8px 16px;
+}
+
+.tabulator .tabulator-footer .tabulator-paginator {
+  color: #475569;
+}
+
+.tabulator .tabulator-page {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  margin: 0 2px;
+  padding: 4px 10px;
+  background: white;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+
+.tabulator .tabulator-page.active {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  font-weight: 600;
+}
+
+.tabulator .tabulator-page:not(.disabled):hover {
+  background-color: #e2e8f0;
+}
+
+/* Toast container */
+#toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
