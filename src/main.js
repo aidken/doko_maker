@@ -5,18 +5,18 @@ import { createIcons, icons } from 'lucide';
 import * as XLSX from 'xlsx';
 import { ExcelHandler } from './excel-handler.js';
 
-// Expose XLSX globally for Tabulator's internal downloader compatibility
+// Expose XLSX globally for Tabulator compatibility
 window.XLSX = XLSX;
 
 // Application State
 const state = {
-  currentWorkbook: null,
-  currentFileName: '',
-  currentFileSize: 0,
-  activeSheetName: '',
   tabulatorTable: null,
-  totalRows: 0,
-  totalCols: 0
+  currentMeta: null,
+  activeFilter: {
+    search: '',
+    status: '',
+    onlyChanges: false
+  }
 };
 
 // DOM Elements
@@ -25,26 +25,27 @@ const fileInput = document.getElementById('file-input');
 const browseBtn = document.getElementById('browse-btn');
 const loadSampleBtn = document.getElementById('load-sample-btn');
 const headerSampleBtn = document.getElementById('header-sample-btn');
+const uploadNewBtn = document.getElementById('upload-new-btn');
 
 const uploadSection = document.getElementById('upload-section');
 const editorSection = document.getElementById('editor-section');
+const progressContainer = document.getElementById('progress-container');
+const progressBar = document.getElementById('progress-bar');
+const progressText = document.getElementById('progress-text');
+const progressPct = document.getElementById('progress-pct');
 
-const fileNameEl = document.getElementById('meta-filename');
-const fileSizeEl = document.getElementById('meta-filesize');
-const rowCountEl = document.getElementById('meta-rowcount');
-const colCountEl = document.getElementById('meta-colcount');
-const sheetTabsContainer = document.getElementById('sheet-tabs-container');
+const metricTotalOrders = document.getElementById('metric-total-orders');
+const metricOrdersChanged = document.getElementById('metric-orders-changed');
+const metricFilesCount = document.getElementById('metric-files-count');
+const metricDateRange = document.getElementById('metric-date-range');
 
 const searchInput = document.getElementById('search-input');
 const clearSearchBtn = document.getElementById('clear-search-btn');
-const addRowBtn = document.getElementById('add-row-btn');
-const deleteRowBtn = document.getElementById('delete-row-btn');
-const undoBtn = document.getElementById('undo-btn');
-const redoBtn = document.getElementById('redo-btn');
+const statusFilterSelect = document.getElementById('status-filter-select');
+const onlyChangesToggle = document.getElementById('only-changes-toggle');
 const pageSizeSelect = document.getElementById('page-size-select');
 const exportExcelBtn = document.getElementById('export-excel-btn');
 const exportCsvBtn = document.getElementById('export-csv-btn');
-const changeFileBtn = document.getElementById('change-file-btn');
 
 /**
  * Initialize application
@@ -56,34 +57,34 @@ function initApp() {
 }
 
 /**
- * Render or refresh Lucide icons
+ * Refresh Lucide SVG icons in the DOM
  */
 function refreshIcons() {
   createIcons({ icons });
 }
 
 /**
- * Configure drag-and-drop & file selection events
+ * Set up drag & drop and file selection events
  */
 function setupUploadEvents() {
   browseBtn.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) handleFile(file);
+    const files = Array.from(e.target.files);
+    if (files.length > 0) processFiles(files);
     fileInput.value = '';
   });
 
-  ['dragenter', 'dragover'].forEach(eventName => {
-    dropzone.addEventListener(eventName, (e) => {
+  ['dragenter', 'dragover'].forEach(name => {
+    dropzone.addEventListener(name, (e) => {
       e.preventDefault();
       e.stopPropagation();
       dropzone.classList.add('drag-active');
     }, false);
   });
 
-  ['dragleave', 'drop'].forEach(eventName => {
-    dropzone.addEventListener(eventName, (e) => {
+  ['dragleave', 'drop'].forEach(name => {
+    dropzone.addEventListener(name, (e) => {
       e.preventDefault();
       e.stopPropagation();
       dropzone.classList.remove('drag-active');
@@ -91,137 +92,91 @@ function setupUploadEvents() {
   });
 
   dropzone.addEventListener('drop', (e) => {
-    const dt = e.dataTransfer;
-    const file = dt.files[0];
-    if (file) handleFile(file);
-  });
-
-  [loadSampleBtn, headerSampleBtn].forEach(btn => {
-    if (btn) {
-      btn.addEventListener('click', () => loadSampleData());
+    const files = Array.from(e.dataTransfer.files).filter(f =>
+      f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
+    );
+    if (files.length > 0) {
+      processFiles(files);
+    } else {
+      showToast('Please drop valid Excel (.xlsx / .xls) files.', 'error');
     }
   });
 
-  changeFileBtn.addEventListener('click', () => {
-    fileInput.click();
+  // Sample data buttons
+  [loadSampleBtn, headerSampleBtn].forEach(btn => {
+    if (btn) {
+      btn.addEventListener('click', () => loadSampleDataset());
+    }
+  });
+
+  // Return to upload view
+  uploadNewBtn.addEventListener('click', () => {
+    editorSection.classList.add('hidden');
+    uploadSection.classList.remove('hidden');
+    progressContainer.classList.add('hidden');
   });
 }
 
 /**
- * Process uploaded file
+ * Updates UI progress bar during file parsing
  */
-async function handleFile(file) {
-  const validExtensions = ['.xlsx', '.xls', '.csv'];
-  const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+function updateProgress(message, percent) {
+  progressContainer.classList.remove('hidden');
+  progressText.textContent = message;
+  progressPct.textContent = `${percent}%`;
+  progressBar.style.width = `${percent}%`;
+}
 
-  if (!validExtensions.includes(ext)) {
-    showToast(`Invalid file type "${ext}". Please upload an Excel (.xlsx, .xls) or .csv file.`, 'error');
-    return;
-  }
-
-  showToast(`Parsing ${file.name}...`, 'info');
-
+/**
+ * Ingest and process a list of snapshot Excel files
+ */
+async function processFiles(files) {
   try {
-    const parsed = await ExcelHandler.readWorkbookFromFile(file);
-    state.currentWorkbook = parsed.workbook;
-    state.currentFileName = parsed.fileName;
-    state.currentFileSize = parsed.fileSize;
+    updateProgress(`Reading ${files.length} file${files.length > 1 ? 's' : ''}...`, 10);
 
-    loadWorkbookIntoUI(parsed.sheetNames[0]);
-    showToast(`Successfully loaded ${file.name}`, 'success');
-  } catch (error) {
-    console.error(error);
-    showToast(`Error parsing file: ${error.message}`, 'error');
-  }
-}
-
-/**
- * Load built-in sample transportation report data
- */
-function loadSampleData() {
-  const sample = ExcelHandler.generateSampleWorkbook();
-  state.currentWorkbook = sample.workbook;
-  state.currentFileName = sample.fileName;
-  state.currentFileSize = sample.fileSize;
-
-  loadWorkbookIntoUI(sample.sheetNames[0]);
-  showToast('Loaded sample transportation report', 'success');
-}
-
-/**
- * Populate UI with current workbook sheets and active sheet data
- */
-function loadWorkbookIntoUI(sheetToSelect) {
-  if (!state.currentWorkbook || !state.currentWorkbook.SheetNames.length) return;
-
-  const sheetNames = state.currentWorkbook.SheetNames;
-  state.activeSheetName = sheetToSelect || sheetNames[0];
-
-  fileNameEl.textContent = state.currentFileName;
-  fileSizeEl.textContent = ExcelHandler.formatBytes(state.currentFileSize);
-
-  renderSheetTabs(sheetNames, state.activeSheetName);
-  loadSheet(state.activeSheetName);
-
-  uploadSection.classList.add('hidden');
-  editorSection.classList.remove('hidden');
-
-  refreshIcons();
-}
-
-/**
- * Render multi-sheet tab navigation
- */
-function renderSheetTabs(sheetNames, activeSheet) {
-  sheetTabsContainer.innerHTML = '';
-
-  sheetNames.forEach(name => {
-    const tabBtn = document.createElement('button');
-    const isActive = name === activeSheet;
-
-    tabBtn.className = `px-3.5 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
-      isActive
-        ? 'bg-blue-600 text-white shadow-sm'
-        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-    }`;
-
-    tabBtn.innerHTML = `
-      <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-      <span>${name}</span>
-    `;
-
-    tabBtn.addEventListener('click', () => {
-      if (state.activeSheetName !== name) {
-        state.activeSheetName = name;
-        renderSheetTabs(sheetNames, name);
-        loadSheet(name);
-      }
+    const result = await ExcelHandler.processMultipleReports(files, (msg, pct) => {
+      updateProgress(msg, pct);
     });
 
-    sheetTabsContainer.appendChild(tabBtn);
-  });
+    state.currentMeta = result.meta;
 
-  refreshIcons();
+    // Populate metrics
+    metricTotalOrders.textContent = result.meta.totalOrders.toLocaleString();
+    metricOrdersChanged.textContent = result.meta.ordersWithChanges.toLocaleString();
+    metricFilesCount.textContent = `${result.meta.filesCount} snapshot${result.meta.filesCount > 1 ? 's' : ''}`;
+    metricDateRange.textContent = result.meta.dateRange || 'N/A';
+
+    // Initialize or re-create Tabulator table
+    renderTable(result.columns, result.data);
+
+    // Switch views
+    setTimeout(() => {
+      progressContainer.classList.add('hidden');
+      uploadSection.classList.add('hidden');
+      editorSection.classList.remove('hidden');
+      refreshIcons();
+      showToast(`Successfully processed ${result.meta.totalOrders} orders across ${result.meta.filesCount} snapshots!`, 'success');
+    }, 300);
+
+  } catch (error) {
+    console.error(error);
+    progressContainer.classList.add('hidden');
+    showToast(`Error processing files: ${error.message}`, 'error');
+  }
 }
 
 /**
- * Load specific sheet into Tabulator
+ * Load built-in synthetic multi-day snapshot sample dataset
  */
-function loadSheet(sheetName) {
-  const sheet = state.currentWorkbook.Sheets[sheetName];
-  if (!sheet) {
-    showToast(`Sheet "${sheetName}" not found.`, 'error');
-    return;
-  }
+function loadSampleDataset() {
+  const sampleFiles = ExcelHandler.generateSampleSnapshots();
+  processFiles(sampleFiles);
+}
 
-  const { columns, data, totalRows, totalCols } = ExcelHandler.parseSheetData(sheet);
-
-  state.totalRows = totalRows;
-  state.totalCols = totalCols;
-
-  rowCountEl.textContent = `${totalRows} rows`;
-  colCountEl.textContent = `${totalCols} cols`;
-
+/**
+ * Renders Tabulator table with parsed columns and data
+ */
+function renderTable(columns, data) {
   if (state.tabulatorTable) {
     state.tabulatorTable.destroy();
   }
@@ -231,99 +186,90 @@ function loadSheet(sheetName) {
     columns: columns,
     layout: "fitDataFill",
     responsiveLayout: false,
-    history: true,
     pagination: "local",
     paginationSize: parseInt(pageSizeSelect.value) || 25,
     paginationSizeSelector: [10, 25, 50, 100, true],
     paginationCounter: "rows",
-    placeholder: "No records found in this sheet.",
+    placeholder: "No orders match the current filter criteria.",
     movableColumns: true,
     renderVertical: "virtual",
-    height: "560px",
-    rowSelection: true,
-    dataChanged: function() {
-      updateGridMetaCounts();
-    }
+    height: "580px",
+    rowSelection: true
   });
 
+  // Reset filters in UI
   searchInput.value = '';
+  statusFilterSelect.value = '';
+  onlyChangesToggle.checked = false;
+  state.activeFilter = { search: '', status: '', onlyChanges: false };
 }
 
 /**
- * Update row and column counters in metadata bar
+ * Applies multi-condition filtering (search query, status, and changes toggle)
  */
-function updateGridMetaCounts() {
+function applyFilters() {
   if (!state.tabulatorTable) return;
-  const count = state.tabulatorTable.getDataCount();
-  rowCountEl.textContent = `${count} rows`;
+
+  const { search, status, onlyChanges } = state.activeFilter;
+
+  state.tabulatorTable.setFilter((data) => {
+    // 1. Changes filter
+    if (onlyChanges && !data.hasChanges) {
+      return false;
+    }
+
+    // 2. Status filter
+    if (status && (!data.containerStatus || !data.containerStatus.toLowerCase().includes(status.toLowerCase()))) {
+      return false;
+    }
+
+    // 3. Global search
+    if (search) {
+      const matchFound = Object.entries(data).some(([k, val]) => {
+        if (k === '_id' || k === 'hasChanges') return false;
+        if (val === null || val === undefined) return false;
+        return String(val).toLowerCase().includes(search);
+      });
+      if (!matchFound) return false;
+    }
+
+    return true;
+  });
 }
 
 /**
- * Set up grid actions (filtering, editing, row deletion, exports)
+ * Configure search, filters, and export buttons
  */
 function setupToolbarEvents() {
+  // Global search input
   let debounceTimeout;
   searchInput.addEventListener('input', (e) => {
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(() => {
-      const term = e.target.value.trim().toLowerCase();
-      if (!state.tabulatorTable) return;
-
-      if (!term) {
-        state.tabulatorTable.clearFilter();
-        return;
-      }
-
-      state.tabulatorTable.setFilter((data) => {
-        return Object.values(data).some(val => {
-          if (val === null || val === undefined) return false;
-          return String(val).toLowerCase().includes(term);
-        });
-      });
+      state.activeFilter.search = e.target.value.trim().toLowerCase();
+      applyFilters();
     }, 200);
   });
 
   clearSearchBtn.addEventListener('click', () => {
     searchInput.value = '';
-    if (state.tabulatorTable) {
-      state.tabulatorTable.clearFilter();
-    }
+    state.activeFilter.search = '';
+    applyFilters();
   });
 
-  undoBtn.addEventListener('click', () => {
-    if (state.tabulatorTable) {
-      state.tabulatorTable.undo();
-      showToast('Action undone', 'info');
-    }
+  // Status dropdown filter
+  statusFilterSelect.addEventListener('change', (e) => {
+    state.activeFilter.status = e.target.value;
+    applyFilters();
   });
 
-  redoBtn.addEventListener('click', () => {
-    if (state.tabulatorTable) {
-      state.tabulatorTable.redo();
-      showToast('Action redone', 'info');
-    }
+  // "Only Orders with Changes" toggle
+  onlyChangesToggle.addEventListener('change', (e) => {
+    state.activeFilter.onlyChanges = e.target.checked;
+    applyFilters();
   });
 
-  addRowBtn.addEventListener('click', () => {
-    if (!state.tabulatorTable) return;
-    const newId = (state.tabulatorTable.getData().length || 0) + 1;
-    state.tabulatorTable.addRow({ _id: newId }, true);
-    showToast('New row added at top', 'info');
-  });
-
-  deleteRowBtn.addEventListener('click', () => {
-    if (!state.tabulatorTable) return;
-    const selectedRows = state.tabulatorTable.getSelectedRows();
-    if (!selectedRows.length) {
-      showToast('Select one or more rows to delete.', 'info');
-      return;
-    }
-
-    const count = selectedRows.length;
-    selectedRows.forEach(row => row.delete());
-    showToast(`Deleted ${count} selected row${count > 1 ? 's' : ''}`, 'info');
-  });
-
+  // Rows per page
   pageSizeSelect.addEventListener('change', (e) => {
     if (!state.tabulatorTable) return;
     const val = e.target.value;
@@ -334,41 +280,37 @@ function setupToolbarEvents() {
     }
   });
 
+  // Export to Excel (.xlsx)
   exportExcelBtn.addEventListener('click', () => {
     if (!state.tabulatorTable) {
-      showToast('No table data to export.', 'error');
+      showToast('No report data available to export.', 'error');
       return;
     }
 
-    const baseName = state.currentFileName
-      ? state.currentFileName.replace(/\.[^/.]+$/, "")
-      : 'doko_report';
-    const exportName = `${baseName}_export.xlsx`;
+    const dateSuffix = state.currentMeta?.snapshotDates?.length
+      ? `_${state.currentMeta.snapshotDates[state.currentMeta.snapshotDates.length - 1]}`
+      : '';
+    const fileName = `Order_Summary_Report${dateSuffix}.xlsx`;
 
-    ExcelHandler.exportTableToExcel(
-      state.tabulatorTable,
-      exportName,
-      state.activeSheetName || 'Sheet1'
-    );
-    showToast(`Exported "${exportName}"`, 'success');
+    ExcelHandler.exportSummaryToExcel(state.tabulatorTable, fileName);
+    showToast(`Exported "${fileName}"`, 'success');
   });
 
+  // Export to CSV
   exportCsvBtn.addEventListener('click', () => {
     if (!state.tabulatorTable) {
-      showToast('No table data to export.', 'error');
+      showToast('No report data available to export.', 'error');
       return;
     }
 
-    const baseName = state.currentFileName
-      ? state.currentFileName.replace(/\.[^/.]+$/, "")
-      : 'doko_report';
-    state.tabulatorTable.download("csv", `${baseName}_export.csv`);
+    const fileName = `Order_Summary_Report.csv`;
+    state.tabulatorTable.download("csv", fileName);
     showToast(`Exported CSV file`, 'success');
   });
 }
 
 /**
- * Toast notification system
+ * Floating toast notification helper
  */
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
@@ -403,6 +345,5 @@ function showToast(message, type = 'info') {
   }, 3500);
 }
 
-// Start app
+// Start app on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', initApp);
-

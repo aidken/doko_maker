@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>doko_maker — Excel Report Parser & Data Grid</title>
+  <title>doko_maker — Hellmann Inbound Order Report & Change History</title>
 </head>
 <body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
 
@@ -12,23 +12,23 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
-          <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+          <i data-lucide="ship" class="w-5 h-5"></i>
         </div>
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="text-lg font-bold text-slate-900 tracking-tight">doko_maker</h1>
-            <span class="text-[10px] font-semibold uppercase tracking-wider bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">SPA</span>
+            <span class="text-[10px] font-semibold uppercase tracking-wider bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Report Generator</span>
           </div>
-          <p class="text-xs text-slate-500">Excel Parser & Interactive Spreadsheet</p>
+          <p class="text-xs text-slate-500">Inbound Container & Order Change Tracker</p>
         </div>
       </div>
 
       <div class="flex items-center space-x-3">
         <button id="header-sample-btn" class="inline-flex items-center text-xs sm:text-sm font-medium text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors">
           <i data-lucide="sparkles" class="w-4 h-4 mr-1.5 text-amber-500"></i>
-          Sample Data
+          Load Sample Data
         </button>
-        <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors p-1.5">
+        <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors p-1.5" title="View Source on GitHub">
           <i data-lucide="github" class="w-5 h-5"></i>
         </a>
       </div>
@@ -38,152 +38,161 @@
   <!-- Main Content Area -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-    <!-- Upload Section (Shown when no file is active) -->
-    <section id="upload-section" class="max-w-3xl mx-auto my-8">
+    <!-- Upload Section (Shown when no report is active) -->
+    <section id="upload-section" class="max-w-3xl mx-auto my-6">
       <div id="dropzone" class="dropzone border-2 border-dashed border-slate-300 hover:border-blue-400 bg-white rounded-2xl p-8 sm:p-12 text-center shadow-sm cursor-pointer">
-        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" class="hidden">
+        <input type="file" id="file-input" accept=".xlsx,.xls" multiple class="hidden">
         
         <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-          <i data-lucide="cloud-upload" class="w-8 h-8"></i>
+          <i data-lucide="upload-cloud" class="w-8 h-8"></i>
         </div>
         
-        <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-2">Upload your Excel or CSV file</h2>
-        <p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">
-          Drag and drop your spreadsheet here, or browse from your computer. Supports <span class="font-medium text-slate-700">.xlsx</span>, <span class="font-medium text-slate-700">.xls</span>, and <span class="font-medium text-slate-700">.csv</span>.
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-2">Upload Daily Inbound Reports</h2>
+        <p class="text-sm text-slate-500 mb-6 max-w-lg mx-auto">
+          Drag & drop one or multiple daily snapshots (<span class="font-medium text-slate-700">Inbound_Report_JP_YYYY-MM-DD.xlsx</span>). The app chronologically tracks all orders, status updates, and ETA changes across time.
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button id="browse-btn" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl shadow-sm transition-colors">
             <i data-lucide="folder-open" class="w-4 h-4 mr-2"></i>
-            Browse Files
+            Select Excel Files
           </button>
           <button id="load-sample-btn" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-xl transition-colors">
             <i data-lucide="sparkles" class="w-4 h-4 mr-2 text-amber-500"></i>
-            Load Sample Report
+            Load Sample (4 Days)
           </button>
         </div>
 
         <p class="text-xs text-slate-400 mt-6 flex items-center justify-center gap-1.5">
           <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
-          100% Client-Side. Your files never leave your browser.
+          100% Client-Side. Sensitive order and freight data never leaves your browser.
         </p>
       </div>
 
-      <!-- Feature Highlights -->
+      <!-- Processing Progress Overlay / Indicator -->
+      <div id="progress-container" class="hidden mt-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <span id="progress-text" class="text-sm font-medium text-slate-700">Processing files...</span>
+          <span id="progress-pct" class="text-sm font-semibold text-blue-600">0%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+          <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-200" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- How it Works Feature Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-        <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-            <i data-lucide="table" class="w-4 h-4"></i>
+            <i data-lucide="list-ordered" class="w-4 h-4"></i>
           </div>
-          <h3 class="font-semibold text-sm text-slate-800 mb-1">Interactive Data Grid</h3>
+          <h3 class="font-semibold text-sm text-slate-800 mb-1">Order Extraction</h3>
           <p class="text-xs text-slate-500 leading-relaxed">
-            Sort, filter, resize columns, and double-click cells to edit data directly in the browser.
+            Extracts 10-digit order numbers (<code class="text-blue-600 font-mono">450...</code>) from container allocation and booking stages.
           </p>
         </div>
 
-        <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
-          <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
-            <i data-lucide="layers" class="w-4 h-4"></i>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
+            <i data-lucide="history" class="w-4 h-4"></i>
           </div>
-          <h3 class="font-semibold text-sm text-slate-800 mb-1">Multi-Sheet Navigation</h3>
+          <h3 class="font-semibold text-sm text-slate-800 mb-1">Change History Log</h3>
           <p class="text-xs text-slate-500 leading-relaxed">
-            Switch effortlessly between workbooks with multiple worksheets using intuitive tabs.
+            Detects changes across daily snapshots for Last Leg ETA, Vessel Name, Container Status, and routes.
           </p>
         </div>
 
-        <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-            <i data-lucide="download" class="w-4 h-4"></i>
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
           </div>
-          <h3 class="font-semibold text-sm text-slate-800 mb-1">Instant Excel Export</h3>
+          <h3 class="font-semibold text-sm text-slate-800 mb-1">Clean Excel Export</h3>
           <p class="text-xs text-slate-500 leading-relaxed">
-            Download your modified or parsed dataset back into an Excel (.xlsx) or CSV file with one click.
+            Exports standardized columns A through Q directly to a formatted Excel (<span class="font-semibold text-slate-700">.xlsx</span>) spreadsheet.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- Editor Section (Visible once a file/sample is loaded) -->
+    <!-- Editor / Summary Section (Visible once reports are parsed) -->
     <section id="editor-section" class="hidden space-y-4">
 
-      <!-- Metadata & File Control Bar -->
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center flex-wrap gap-2.5">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-            </div>
-            <div>
-              <span id="meta-filename" class="font-semibold text-slate-800 text-sm block">filename.xlsx</span>
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span id="meta-filesize">0 KB</span>
-                <span>•</span>
-                <span id="meta-rowcount" class="font-medium text-slate-700">0 rows</span>
-                <span>•</span>
-                <span id="meta-colcount" class="font-medium text-slate-700">0 cols</span>
-              </div>
-            </div>
+      <!-- Metrics Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-xs text-slate-500 block mb-0.5">Total Orders Tracked</span>
+          <span id="metric-total-orders" class="text-xl sm:text-2xl font-bold text-slate-900">0</span>
+        </div>
+
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-xs text-slate-500 block mb-0.5">Orders with Changes</span>
+          <div class="flex items-center gap-1.5">
+            <span id="metric-orders-changed" class="text-xl sm:text-2xl font-bold text-amber-600">0</span>
+            <span class="text-[10px] font-medium bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">Alerts</span>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button id="change-file-btn" class="inline-flex items-center text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors">
-            <i data-lucide="folder-input" class="w-3.5 h-3.5 mr-1.5"></i>
-            Change File
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-xs text-slate-500 block mb-0.5">Snapshots Parsed</span>
+          <span id="metric-files-count" class="text-xl sm:text-2xl font-bold text-slate-900">0 files</span>
+        </div>
+
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 block mb-0.5">Date Range</span>
+            <span id="metric-date-range" class="text-xs sm:text-sm font-semibold text-slate-800">N/A</span>
+          </div>
+          <button id="upload-new-btn" class="inline-flex items-center text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition-colors ml-2" title="Upload a different set of reports">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 mr-1"></i>
+            New Upload
           </button>
         </div>
       </div>
 
-      <!-- Multi-sheet tabs -->
-      <div class="flex items-center space-x-2 overflow-x-auto pb-1" id="sheet-tabs-container">
-        <!-- Dynamically populated sheet buttons -->
-      </div>
-
-      <!-- Grid Toolbar -->
+      <!-- Grid Toolbar & Filters -->
       <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-        <!-- Left: Search & History -->
-        <div class="flex items-center flex-wrap gap-2">
+        
+        <!-- Left: Search & Filter Controls -->
+        <div class="flex items-center flex-wrap gap-2.5">
           <!-- Global Search -->
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
               <i data-lucide="search" class="w-4 h-4"></i>
             </div>
-            <input type="text" id="search-input" placeholder="Search in table..." class="pl-8 pr-7 py-1.5 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white w-44 sm:w-60 transition-all">
-            <button id="clear-search-btn" title="Clear filter" class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 hover:text-slate-600">
+            <input type="text" id="search-input" placeholder="Search PO, Container, Ref..." class="pl-8 pr-7 py-1.5 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white w-48 sm:w-64 transition-all">
+            <button id="clear-search-btn" title="Clear search" class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 hover:text-slate-600">
               <i data-lucide="x" class="w-3.5 h-3.5"></i>
             </button>
           </div>
 
-          <!-- History / Undo Redo -->
-          <div class="flex items-center border-l border-slate-200 pl-2 ml-1 space-x-1">
-            <button id="undo-btn" title="Undo change" class="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors">
-              <i data-lucide="undo-2" class="w-4 h-4"></i>
-            </button>
-            <button id="redo-btn" title="Redo change" class="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors">
-              <i data-lucide="redo-2" class="w-4 h-4"></i>
-            </button>
+          <!-- Status Filter Dropdown -->
+          <div class="flex items-center text-xs">
+            <select id="status-filter-select" class="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">All Container Statuses</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Discharged from Vessel">Discharged from Vessel</option>
+              <option value="Departed">Departed</option>
+              <option value="Container Booked">Container Booked</option>
+              <option value="Customer Booking Received">Customer Booking Received</option>
+              <option value="Arrived">Arrived</option>
+              <option value="Empty Container Returned">Empty Container Returned</option>
+            </select>
           </div>
 
-          <!-- Row operations -->
-          <div class="flex items-center border-l border-slate-200 pl-2 ml-1 space-x-1">
-            <button id="add-row-btn" title="Add row at top" class="inline-flex items-center text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 px-2.5 py-1.5 rounded-md transition-colors">
-              <i data-lucide="plus" class="w-3.5 h-3.5 mr-1 text-blue-600"></i>
-              Add Row
-            </button>
-            <button id="delete-row-btn" title="Delete selected rows" class="inline-flex items-center text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-md transition-colors">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5 mr-1"></i>
-              Delete Selected
-            </button>
-          </div>
+          <!-- Toggle: Only Show Changed Orders -->
+          <label class="inline-flex items-center cursor-pointer select-none text-xs text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-300 px-2.5 py-1.5 rounded-lg transition-colors">
+            <input type="checkbox" id="only-changes-toggle" class="sr-only peer">
+            <div class="w-7 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-500 relative mr-2"></div>
+            <span>Only Orders with Changes</span>
+          </label>
         </div>
 
         <!-- Right: Pagination & Export -->
         <div class="flex items-center flex-wrap gap-2">
-          <!-- Page size selector -->
+          <!-- Rows per page -->
           <div class="flex items-center text-xs text-slate-500">
             <span class="mr-1.5 hidden sm:inline">Rows:</span>
             <select id="page-size-select" class="bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
-              <option value="10">10</option>
               <option value="25" selected>25</option>
               <option value="50">50</option>
               <option value="100">100</option>
@@ -204,7 +213,7 @@
         </div>
       </div>
 
-      <!-- Tabulator Container -->
+      <!-- Tabulator Spreadsheet Container -->
       <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
         <div id="excel-grid"></div>
       </div>
@@ -213,7 +222,7 @@
       <div class="flex items-center justify-between text-xs text-slate-500 px-2">
         <span class="flex items-center gap-1.5">
           <i data-lucide="info" class="w-3.5 h-3.5 text-blue-500"></i>
-          Double-click any cell to edit. Drag headers to reorder columns. Click column headers to sort.
+          Summary tracks columns A to Q with Change History across snapshots. Click headers to sort.
         </span>
       </div>
     </section>
